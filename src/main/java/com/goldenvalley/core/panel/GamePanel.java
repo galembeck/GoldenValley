@@ -12,13 +12,14 @@ import java.awt.*;
 
 public class GamePanel extends JPanel implements GameUpdater, GameRenderer {
 
-    private final KeyHandler keyHandler;
-    private final Player player;
     private final GameLoop gameLoop;
+    private final KeyHandler keyHandler;
+
+    private final Player player;
 
     public GamePanel() {
         this.keyHandler = new KeyHandler();
-        this.player = new Player();
+        this.player = new Player(this, keyHandler);
         this.gameLoop = new GameLoop(this, this);
 
         setupPanel();
@@ -38,10 +39,7 @@ public class GamePanel extends JPanel implements GameUpdater, GameRenderer {
 
     @Override
     public void update() {
-        if (keyHandler.upPressed) player.moveUp();
-        if (keyHandler.downPressed) player.moveDown();
-        if (keyHandler.leftPressed) player.moveLeft();
-        if (keyHandler.rightPressed) player.moveRight();
+        player.update();
     }
 
     @Override
