@@ -4,8 +4,9 @@ import com.goldenvalley.core.config.GameConfig;
 import com.goldenvalley.core.engine.GameLoop;
 import com.goldenvalley.core.engine.GameRenderer;
 import com.goldenvalley.core.engine.GameUpdater;
-import com.goldenvalley.handlers.KeyHandler;
 import com.goldenvalley.entities.Player;
+import com.goldenvalley.handlers.KeyHandler;
+import com.goldenvalley.terrains.TileManager;
 
 import javax.swing.*;
 import java.awt.*;
@@ -15,12 +16,17 @@ public class GamePanel extends JPanel implements GameUpdater, GameRenderer {
     private final GameLoop gameLoop;
     private final KeyHandler keyHandler;
 
-    private final Player player;
+    private final TileManager tileManager;
+
+    public final Player player;
 
     public GamePanel() {
-        this.keyHandler = new KeyHandler();
-        this.player = new Player(this, keyHandler);
         this.gameLoop = new GameLoop(this, this);
+        this.keyHandler = new KeyHandler();
+
+        this.tileManager = new TileManager(this);
+
+        this.player = new Player(this, keyHandler);
 
         setupPanel();
     }
@@ -52,6 +58,7 @@ public class GamePanel extends JPanel implements GameUpdater, GameRenderer {
         super.paintComponent(g);
         Graphics2D g2D = (Graphics2D) g;
 
+        tileManager.draw(g2D);
         player.render(g2D);
 
         g2D.dispose();

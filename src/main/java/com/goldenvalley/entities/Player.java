@@ -11,124 +11,116 @@ import java.io.IOException;
 import java.util.Objects;
 
 public class Player extends Entity {
-    GamePanel gp;
-    KeyHandler keyHandler;
+    private final KeyHandler keyHandler;
+
+    public final int screenX, screenY;
 
     public Player(GamePanel gp, KeyHandler keyHandler) {
-        this.gp = gp;
         this.keyHandler = keyHandler;
 
-        setDefaultValues();
-        getPlayerImage();
+        screenX = (GameConfig.SCREEN_WIDTH - GameConfig.TILE_SIZE) / 2;
+        screenY = (GameConfig.SCREEN_HEIGHT - GameConfig.TILE_SIZE) / 2;
 
-        direction = "down";
+        setDefaultValues();
+        loadPlayerImage();
+
+        direction = Direction.DOWN;
     }
 
     public void setDefaultValues() {
-        this.x = (GameConfig.SCREEN_WIDTH - GameConfig.TILE_SIZE) / 2;
-        this.y = (GameConfig.SCREEN_HEIGHT - GameConfig.TILE_SIZE) / 2;
+        this.worldX = GameConfig.TILE_SIZE * 23;
+        this.worldY = GameConfig.TILE_SIZE * 21;
         this.speed = GameConfig.DEFAULT_PLAYER_SPEED;
         this.size = GameConfig.TILE_SIZE;
     }
 
-    public void getPlayerImage() {
+    private void loadPlayerImage() {
+        String basePath = "/assets/player/boy_";
+        String[] directions = {"up", "down", "left", "right"};
+
+        for (String dir : directions) {
+            loadDirectionSprites(dir, basePath + dir + "_");
+        }
+    }
+
+    private void loadDirectionSprites(String directionStr, String basePath) {
         try {
-            up1 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/player/boy_up_1.png")));
-            up2 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/player/boy_up_2.png")));
-            down1 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/player/boy_down_1.png")));
-            down2 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/player/boy_down_2.png")));
-            left1 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/player/boy_left_1.png")));
-            left2 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/player/boy_left_2.png")));
-            right1 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/player/boy_right_1.png")));
-            right2 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream("/assets/player/boy_right_2.png")));
+            BufferedImage sprite1 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(basePath + "1.png")));
+            BufferedImage sprite2 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(basePath + "2.png")));
+
+            switch (directionStr) {
+                case "up" -> { up1 = sprite1; up2 = sprite2; }
+                case "down" -> { down1 = sprite1; down2 = sprite2; }
+                case "left" -> { left1 = sprite1; left2 = sprite2; }
+                case "right" -> { right1 = sprite1; right2 = sprite2; }
+            }
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public void moveUp() {
-        direction = "up";
-        y -= speed;
+        direction = Direction.UP;
+        worldY -= speed;
     }
+
     public void moveDown() {
-        direction = "down";
-        y += speed;
+        direction = Direction.DOWN;
+        worldY += speed;
     }
+
     public void moveLeft() {
-        direction = "left";
-        x -= speed;
+        direction = Direction.LEFT;
+        worldX -= speed;
     }
+
     public void moveRight() {
-        direction = "right";
-        x += speed;
+        direction = Direction.RIGHT;
+        worldX += speed;
     }
 
     public void update() {
-        if (keyHandler.upPressed) moveUp();
-        if (keyHandler.downPressed) moveDown();
-        if (keyHandler.leftPressed) moveLeft();
-        if (keyHandler.rightPressed) moveRight();
+        boolean isMoving = false;
 
-        // Ensure player stays within bounds
-        x = Math.max(0, Math.min(x, GameConfig.SCREEN_WIDTH - size));
-        y = Math.max(0, Math.min(y, GameConfig.SCREEN_HEIGHT - size));
+        if (keyHandler.upPressed) {
+            moveUp();
+            isMoving = true;
+        }
+        if (keyHandler.downPressed) {
+            moveDown();
+            isMoving = true;
+        }
+        if (keyHandler.leftPressed) {
+            moveLeft();
+            isMoving = true;
+        }
+        if (keyHandler.rightPressed) {
+            moveRight();
+            isMoving = true;
+        }
 
-        spriteCounter++;
+//        worldX = Math.max(0, Math.min(worldX, GameConfig.SCREEN_WIDTH - size));
+//        worldY = Math.max(0, Math.min(worldY, GameConfig.SCREEN_HEIGHT - size));
 
-        if (spriteCounter > 12) {
-            if (spriteNumber == 1) {
-                spriteNumber = 2;
-            } else if (spriteNumber == 2) {
-                spriteNumber = 1;
+        if (isMoving) {
+            spriteCounter++;
+            if (spriteCounter > 10) {
+                spriteNumber = (spriteNumber == 1) ? 2 : 1;
+                spriteCounter = 0;
             }
-
-            spriteCounter = 0;
         }
     }
 
     public void render(Graphics2D g2D) {
-        BufferedImage image = null;
+        BufferedImage image = switch (direction) {
+            case UP -> (spriteNumber == 1) ? up1 : up2;
+            case DOWN -> (spriteNumber == 1) ? down1 : down2;
+            case LEFT -> (spriteNumber == 1) ? left1 : left2;
+            case RIGHT -> (spriteNumber == 1) ? right1 : right2;
+        };
 
-        switch (direction) {
-            case "up":
-                if (spriteNumber == 1) {
-                    image = up1;
-                }
-                if (spriteNumber == 2) {
-                    image = up2;
-                }
-                break;
-            case "down":
-                if (spriteNumber == 1) {
-                    image = down1;
-                }
-                if (spriteNumber == 2) {
-                    image = down2;
-                }
-                break;
-            case "left":
-                if (spriteNumber == 1) {
-                    image = left1;
-                }
-                if (spriteNumber == 2) {
-                    image = left2;
-                }
-                break;
-            case "right":
-                if (spriteNumber == 1) {
-                    image = right1;
-                }
-                if (spriteNumber == 2) {
-                    image = right2;
-                }
-                break;
+        if (image != null) {
+            g2D.drawImage(image, screenX, screenY, size, size, null);
         }
-
-        g2D.drawImage(image, x, y, size, size, null);
     }
-
-    // Getters
-    public int getX() { return x; }
-    public int getY() { return y; }
-    public int getSize() { return size; }
 }
