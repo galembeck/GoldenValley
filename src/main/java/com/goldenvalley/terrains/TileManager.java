@@ -18,7 +18,7 @@ public class TileManager {
 
     public TileManager(GamePanel gp) {
         this.gp = gp;
-        tiles = new Tile[10];
+        tiles = new Tile[20];
         mapTileNumber = new int[GameConfig.MAX_WORLD_COL][GameConfig.MAX_WORLD_ROW];
 
         loadTileImage();
@@ -47,8 +47,8 @@ public class TileManager {
                     getClass().getResourceAsStream("/assets/tiles/down_grass.png")
             ));
 
-            tiles[5] = new Tile();
-            tiles[5].image = ImageIO.read(Objects.requireNonNull(
+            tiles[12] = new Tile();
+            tiles[12].image = ImageIO.read(Objects.requireNonNull(
                     getClass().getResourceAsStream("/assets/tiles/up_grass.png")
             ));
 
@@ -60,6 +60,26 @@ public class TileManager {
             tiles[7] = new Tile();
             tiles[7].image = ImageIO.read(Objects.requireNonNull(
                     getClass().getResourceAsStream("/assets/tiles/left_grass.png")
+            ));
+
+            tiles[8] = new Tile();
+            tiles[8].image = ImageIO.read(Objects.requireNonNull(
+                    getClass().getResourceAsStream("/assets/tiles/bottom_left_grass.png")
+            ));
+
+            tiles[9] = new Tile();
+            tiles[9].image = ImageIO.read(Objects.requireNonNull(
+                    getClass().getResourceAsStream("/assets/tiles/bottom_right_grass.png")
+            ));
+
+            tiles[10] = new Tile();
+            tiles[10].image = ImageIO.read(Objects.requireNonNull(
+                    getClass().getResourceAsStream("/assets/tiles/upper_right_grass.png")
+            ));
+
+            tiles[11] = new Tile();
+            tiles[11].image = ImageIO.read(Objects.requireNonNull(
+                    getClass().getResourceAsStream("/assets/tiles/upper_left_grass.png")
             ));
 
             // Adicione mais tiles conforme necessário...
