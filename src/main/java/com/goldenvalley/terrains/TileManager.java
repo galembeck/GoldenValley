@@ -47,8 +47,8 @@ public class TileManager {
                     getClass().getResourceAsStream("/assets/tiles/down_grass.png")
             ));
 
-            tiles[12] = new Tile();
-            tiles[12].image = ImageIO.read(Objects.requireNonNull(
+            tiles[5] = new Tile();
+            tiles[5].image = ImageIO.read(Objects.requireNonNull(
                     getClass().getResourceAsStream("/assets/tiles/up_grass.png")
             ));
 
