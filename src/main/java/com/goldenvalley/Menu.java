@@ -1,17 +1,22 @@
 package com.goldenvalley;
 
+import com.goldenvalley.core.engine.Sound;
+
 import javax.swing.*;
 import javax.swing.plaf.basic.BasicButtonUI;
 import java.awt.*;
 import java.awt.event.ActionListener;
-import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 
 public class Menu extends JFrame {
 
     private Image buttonNormalImg;
     private Image buttonHoverImg;
     private Font pixelFont;
+
+    // --- 2. SISTEMA DE SOM ---
+    private Sound sound = new Sound();
 
     public Menu() {
         setTitle("Golden Valley");
@@ -20,31 +25,33 @@ public class Menu extends JFrame {
         setLocationRelativeTo(null);
         setResizable(false);
 
-        pixelFont = loadCustomFont("src/main/resources/assets/Menu/Stardew_Valley.ttf", 23f);
+        // --- CARREGAMENTO DE ASSETS VISUAIS ---
+        pixelFont = loadCustomFont("/assets/Menu/Stardew_Valley.ttf", 23f);
 
-        ImageIcon normalIcon = loadScaledIcon("src/main/resources/assets/Menu/button_normal.png", 380, 75);
+        ImageIcon normalIcon = loadScaledIcon("/assets/Menu/button_normal.png", 380, 75);
         if (normalIcon != null) buttonNormalImg = normalIcon.getImage();
 
-        ImageIcon hoverIcon = loadScaledIcon("src/main/resources/assets/Menu/button_hover.png", 380, 75);
+        ImageIcon hoverIcon = loadScaledIcon("/assets/Menu/button_hover.png", 380, 75);
         if (hoverIcon != null) buttonHoverImg = hoverIcon.getImage();
 
-        BackgroundPanel backgroundPanel = new BackgroundPanel("src/main/resources/assets/Menu/background.png");
+        BackgroundPanel backgroundPanel = new BackgroundPanel("/assets/Menu/background.png");
         backgroundPanel.setLayout(new GridBagLayout());
         setContentPane(backgroundPanel);
 
+        // ... (resto da configuração visual dos componentes) ...
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.gridx = 0;
         gbc.insets = new Insets(5, 0, 10, 0);
 
         JLabel logoLabel = new JLabel();
-        ImageIcon logoIcon = loadScaledIcon("src/main/resources/assets/Menu/logo.png", 550, 280);
+        ImageIcon logoIcon = loadScaledIcon("/assets/Menu/logo.png", 550, 280);
 
         if (logoIcon != null) {
             logoLabel.setIcon(logoIcon);
         } else {
             logoLabel.setText("GOLDEN VALLEY");
             logoLabel.setForeground(Color.WHITE);
-            logoLabel.setFont(pixelFont.deriveFont(40f));
+            logoLabel.setFont(pixelFont != null ? pixelFont.deriveFont(40f) : new Font("Arial", Font.BOLD, 40));
         }
 
         gbc.gridy = 0;
@@ -54,7 +61,7 @@ public class Menu extends JFrame {
         buttonPanel.setLayout(new BoxLayout(buttonPanel, BoxLayout.Y_AXIS));
         buttonPanel.setOpaque(false);
 
-        buttonPanel.add(createStyledButton("NOVO JOGO", e -> iniciarJogo()));
+        buttonPanel.add(createStyledButton("NOVO JOGO", e -> acaoIniciarJogo()));
         buttonPanel.add(Box.createVerticalStrut(8));
         buttonPanel.add(createStyledButton("CARREGAR", e -> System.out.println("Carregar...")));
         buttonPanel.add(Box.createVerticalStrut(8));
@@ -71,11 +78,11 @@ public class Menu extends JFrame {
 
         JLabel versionLabel = new JLabel("v. 0.1.5 Alpha");
         versionLabel.setForeground(Color.WHITE);
-        versionLabel.setFont(pixelFont.deriveFont(18f));
+        if (pixelFont != null) versionLabel.setFont(pixelFont.deriveFont(18f));
 
         JLabel copyLabel = new JLabel("© 2024 Golden Pixel Studio");
         copyLabel.setForeground(Color.WHITE);
-        copyLabel.setFont(pixelFont.deriveFont(18f));
+        if (pixelFont != null) copyLabel.setFont(pixelFont.deriveFont(18f));
 
         footerPanel.add(versionLabel, BorderLayout.WEST);
         footerPanel.add(copyLabel, BorderLayout.EAST);
@@ -89,17 +96,37 @@ public class Menu extends JFrame {
         backgroundPanel.add(footerPanel, footerGbc);
 
         setVisible(true);
+
+        // --- 3. TOCAR MÚSICA AO ABRIR O MENU ---
+        // O index 1 é o Menu.wav (definido na classe Sound)
+        playMusic(1);
     }
 
-    private void iniciarJogo() {
+    private void acaoIniciarJogo() {
+        // --- 4. PARAR MÚSICA ANTES DE ENTRAR NO JOGO ---
+        stopMusic();
+
         dispose();
-        new GoldenValley();
+        GoldenValley.iniciarJogo();
     }
+
+    // --- MÉTODOS AUXILIARES DE SOM ---
+    public void playMusic(int i) {
+        sound.setFile(i);
+        sound.play();
+        sound.loop();
+    }
+
+    public void stopMusic() {
+        sound.stop();
+    }
+
+    // ... (o resto do código de botões, fontes e imagens continua igual) ...
 
     private JButton createStyledButton(String text, ActionListener action) {
         JButton button = new JButton(text);
 
-        button.setFont(pixelFont);
+        if (pixelFont != null) button.setFont(pixelFont);
         button.setForeground(Color.WHITE);
 
         button.setFocusPainted(false);
@@ -164,44 +191,43 @@ public class Menu extends JFrame {
 
     private Font loadCustomFont(String path, float size) {
         try {
-            File fontFile = new File(path);
-            if (fontFile.exists()) {
-                Font font = Font.createFont(Font.TRUETYPE_FONT, fontFile);
-                GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
-                ge.registerFont(font);
+            InputStream is = getClass().getResourceAsStream(path);
+            if (is != null) {
+                Font font = Font.createFont(Font.TRUETYPE_FONT, is);
                 return font.deriveFont(size);
             } else {
-                System.err.println("Fonte não encontrada em: " + path);
+                System.err.println("Fonte não encontrada: " + path);
             }
         } catch (FontFormatException | IOException e) {
-            System.err.println("Erro ao carregar fonte: " + e.getMessage());
+            e.printStackTrace();
         }
         return new Font("Serif", Font.BOLD, (int) size);
     }
 
     private ImageIcon loadScaledIcon(String path, int width, int height) {
-        if (new File(path).exists()) {
-            ImageIcon originalIcon = new ImageIcon(path);
+        java.net.URL imgURL = getClass().getResource(path);
+        if (imgURL != null) {
+            ImageIcon originalIcon = new ImageIcon(imgURL);
             Image originalImage = originalIcon.getImage();
             Image scaledImage = originalImage.getScaledInstance(width, height, Image.SCALE_SMOOTH);
             return new ImageIcon(scaledImage);
+        } else {
+            System.err.println("Imagem não encontrada: " + path);
+            return null;
         }
-        return null;
-    }
-
-    public static void main(String[] args) {
-        SwingUtilities.invokeLater(Menu::new);
     }
 
     private class BackgroundPanel extends JPanel {
         private final Image backgroundImage;
 
         BackgroundPanel(String imagePath) {
-            ImageIcon icon = null;
-            if (new File(imagePath).exists()) {
-                icon = new ImageIcon(imagePath);
+            java.net.URL imgURL = getClass().getResource(imagePath);
+            if (imgURL != null) {
+                backgroundImage = new ImageIcon(imgURL).getImage();
+            } else {
+                backgroundImage = null;
+                System.err.println("Background não encontrado: " + imagePath);
             }
-            backgroundImage = icon != null ? icon.getImage() : null;
         }
 
         @Override

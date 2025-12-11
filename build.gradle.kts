@@ -16,7 +16,7 @@ dependencies {
 }
 
 application {
-    mainClass = ("com.goldenvalley.Menu")
+    mainClass = ("com.goldenvalley.GoldenValley")
 }
 
 tasks.test {

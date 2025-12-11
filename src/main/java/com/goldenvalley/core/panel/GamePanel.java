@@ -12,49 +12,48 @@ import java.awt.*;
 
 public class GamePanel extends JPanel implements GameUpdater, GameRenderer {
 
-    // --- SISTEMA ---
-    private final GameLoop gameLoop;
-    private final KeyHandler keyHandler;
+    // --- CONFIGURAÇÕES DE TELA ---
+    public final int tileSize = GameConfig.TILE_SIZE;
+    public final int screenWidth = GameConfig.SCREEN_WIDTH;
+    public final int screenHeight = GameConfig.SCREEN_HEIGHT;
 
-    // --- ENTIDADES ---
-    public final Player player;
-    public final MapManager mapManager;
+    // --- SISTEMAS DO MOTOR ---
+    // KeyHandler recebe 'this' para acessar variáveis como debugMode
+    public KeyHandler keyHandler = new KeyHandler(this);
+    public Sound music = new Sound();
+    public Sound se = new Sound();
+    public GameLoop gameLoop = new GameLoop(this, this);
 
-    // --- LÓGICA DO MUNDO ---
-    public CollisionChecker cChecker;
-    public AssetSetter aSetter;
+    // --- GERENCIADORES E ENTIDADES ---
+    public Player player = new Player(this, keyHandler);
+    public MapManager mapManager = new MapManager(this);
+    public CollisionChecker cChecker = new CollisionChecker(this);
+    public AssetSetter aSetter = new AssetSetter(this);
+
+    // Sistema de Cutscene (Pescar/Plantar)
+    public ActionAnimation actionAnim = new ActionAnimation(this);
+
+    // --- OBJETOS DO JOGO ---
     public GameObject[] objects = new GameObject[200];
-
-    // --- NOVO: ANIMAÇÃO DE AÇÃO ---
-    public ActionAnimation actionAnim;
 
     // --- DEBUG ---
     public boolean debugMode = false;
 
     public GamePanel() {
-        this.setPreferredSize(new Dimension(GameConfig.SCREEN_WIDTH, GameConfig.SCREEN_HEIGHT));
+        this.setPreferredSize(new Dimension(screenWidth, screenHeight));
         this.setBackground(Color.BLACK);
         this.setDoubleBuffered(true);
-        this.setFocusable(true);
-
-        // Inicializações
-        this.keyHandler = new KeyHandler(this);
         this.addKeyListener(keyHandler);
-
-        this.gameLoop = new GameLoop(this, this);
-        this.player = new Player(this, keyHandler);
-        this.mapManager = new MapManager(this);
-        this.cChecker = new CollisionChecker(this);
-        this.aSetter = new AssetSetter(this);
-
-        // Inicializa o sistema de animação
-        this.actionAnim = new ActionAnimation(this);
-
-        setupGame();
+        this.setFocusable(true);
     }
 
     public void setupGame() {
+        // Coloca os objetos (pedras, etc) no mapa
         aSetter.setObject();
+
+        // Toca a música de fundo do jogo (Index 0)
+        // O index 1 era a do menu, que o Swing já tocou/parou se você configurou lá
+        playMusic(0);
     }
 
     public void startGameThread() {
@@ -63,16 +62,16 @@ public class GamePanel extends JPanel implements GameUpdater, GameRenderer {
 
     @Override
     public void update() {
-        // --- TRAVAMENTO PARA CUTSCENE ---
-        // Se a animação estiver ativa, atualizamos ELA e NÃO o jogador
+        // Se uma animação de ação (pescar/plantar) estiver rodando, o jogo "congela"
         if (actionAnim.active) {
             actionAnim.update();
         } else {
-            // Jogo normal: Jogador se move
+            // Jogo normal fluindo
             player.update();
         }
     }
 
+    // Método obrigatório da interface GameRenderer
     @Override
     public void render() {
         repaint();
@@ -83,25 +82,35 @@ public class GamePanel extends JPanel implements GameUpdater, GameRenderer {
         super.paintComponent(g);
         Graphics2D g2D = (Graphics2D) g;
 
-        // 1. Mapa
-        if (mapManager != null) mapManager.draw(g2D);
-
-        // 2. Objetos
-        for (int i = 0; i < objects.length; i++) {
-            if (objects[i] != null) objects[i].draw(g2D, this);
+        // 1. DESENHA O MAPA (Fundo)
+        if (mapManager != null) {
+            mapManager.draw(g2D);
         }
 
-        // 3. Jogador
-        if (player != null) player.render(g2D);
+        // 2. DESENHA OS OBJETOS (Pedras, Plantações)
+        for (int i = 0; i < objects.length; i++) {
+            if (objects[i] != null) {
+                objects[i].draw(g2D, this);
+            }
+        }
 
-        // 4. EFEITOS ESPECIAIS (Por cima de tudo)
-        if (actionAnim != null) actionAnim.draw(g2D);
+        // 3. DESENHA O JOGADOR
+        if (player != null) {
+            player.render(g2D);
+        }
 
-        // 5. Debug UI
+        // 4. DESENHA ANIMAÇÕES DE AÇÃO (Texto "Pescando...", Barra, etc)
+        if (actionAnim != null) {
+            actionAnim.draw(g2D);
+        }
+
+        // 5. DEBUG UI (Se apertar T)
         if (debugMode) {
-            g2D.setFont(new Font("Arial", Font.BOLD, 20));
             g2D.setColor(Color.WHITE);
-            g2D.drawString("X: " + player.worldX + " Y: " + player.worldY, 10, 40);
+            g2D.setFont(new Font("Arial", Font.BOLD, 18));
+            g2D.drawString("X: " + player.worldX + " Y: " + player.worldY, 10, 30);
+
+            // Desenha a Hitbox do player
             g2D.setColor(Color.RED);
             g2D.drawRect(player.screenX + player.solidArea.x,
                     player.screenY + player.solidArea.y,
@@ -109,5 +118,21 @@ public class GamePanel extends JPanel implements GameUpdater, GameRenderer {
         }
 
         g2D.dispose();
+    }
+
+    // --- SISTEMA DE SOM ---
+    public void playMusic(int i) {
+        music.setFile(i);
+        music.play();
+        music.loop();
+    }
+
+    public void stopMusic() {
+        music.stop();
+    }
+
+    public void playSE(int i) {
+        se.setFile(i);
+        se.play();
     }
 }

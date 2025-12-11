@@ -45,6 +45,7 @@ public class Player extends Entity {
     }
 
     private void loadPlayerImage() {
+        // Carrega as imagens (boy_up_1.png, etc)
         String basePath = "/assets/player/boy_";
         up1 = setup(basePath + "up_1.png");
         up2 = setup(basePath + "up_2.png");
@@ -61,6 +62,7 @@ public class Player extends Entity {
         try {
             var stream = getClass().getResourceAsStream(imagePath);
             if (stream != null) image = ImageIO.read(stream);
+            else System.err.println("Sprite faltando: " + imagePath);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -71,23 +73,19 @@ public class Player extends Entity {
         if (keyHandler.upPressed || keyHandler.downPressed ||
                 keyHandler.leftPressed || keyHandler.rightPressed || keyHandler.enterPressed) {
 
-            // Direção
             if (keyHandler.upPressed) direction = Direction.UP;
             else if (keyHandler.downPressed) direction = Direction.DOWN;
             else if (keyHandler.leftPressed) direction = Direction.LEFT;
             else if (keyHandler.rightPressed) direction = Direction.RIGHT;
 
-            // Colisão
             collisionOn = false;
             gp.cChecker.checkMap(this);
             int objIndex = gp.cChecker.checkObject(this, true);
 
-            // Interação (Enter)
             if (keyHandler.enterPressed) {
                 interact(objIndex);
                 keyHandler.enterPressed = false;
             }
-            // Movimento
             else if (!collisionOn) {
                 switch (direction) {
                     case UP -> worldY -= speed;
@@ -97,7 +95,6 @@ public class Player extends Entity {
                 }
             }
 
-            // Animação de andar
             spriteCounter++;
             if (spriteCounter > 12) {
                 spriteNumber = (spriteNumber == 1) ? 2 : 1;
@@ -105,7 +102,7 @@ public class Player extends Entity {
             }
         }
 
-        // Limites da tela
+        // Limites do Mundo
         if (gp.mapManager != null) {
             int mapW = gp.mapManager.getMapWidth();
             int mapH = gp.mapManager.getMapHeight();
@@ -118,8 +115,10 @@ public class Player extends Entity {
     }
 
     public void interact(int index) {
-        // 1. Interagir com Objetos (Pedras, Baús)
+        // 1. Interagir com Objeto (Quebrar/Abrir)
         if (index != 999) {
+            gp.playSE(2); // Som de HIT (Index 2)
+
             GameObject obj = gp.objects[index];
             if (obj instanceof Interactable) {
                 ((Interactable) obj).interact(gp, index);
@@ -137,18 +136,19 @@ public class Player extends Entity {
                 case RIGHT -> nextX += GameConfig.TILE_SIZE;
             }
 
-            // Verifica se o alvo é sólido (água/parede)
-            // Certifique-se de ter adicionado checkPosition no CollisionChecker!
+            // Verifica se é água/parede (Vermelho na máscara)
             boolean isSolid = gp.cChecker.checkPosition(nextX, nextY);
 
             if (isSolid) {
-                // Se for sólido (água), pesca
-                System.out.println("Iniciando pescaria...");
-                gp.actionAnim.play("FISHING"); // Toca a animação
+                // É água -> Pescar
+                System.out.println("Pescando...");
+                gp.playSE(5); // Som de FISHING (Index 5)
+                gp.actionAnim.play("FISHING");
             } else {
-                // Se for vazio, planta
+                // É terra -> Plantar
+                gp.playSE(4); // Som de PLANTING (Index 4)
                 plantCrop(nextX, nextY);
-                gp.actionAnim.play("PLANTING"); // Toca a animação
+                gp.actionAnim.play("PLANTING");
             }
         }
     }
@@ -158,7 +158,6 @@ public class Player extends Entity {
             if(gp.objects[i] == null) {
                 int gridX = (x / GameConfig.TILE_SIZE) * GameConfig.TILE_SIZE;
                 int gridY = (y / GameConfig.TILE_SIZE) * GameConfig.TILE_SIZE;
-
                 gp.objects[i] = new Crop(gridX, gridY);
                 break;
             }
