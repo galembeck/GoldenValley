@@ -1,59 +1,73 @@
 package com.goldenvalley.entities;
 
+import com.goldenvalley.core.config.GameConfig;
 import com.goldenvalley.core.panel.GamePanel;
+
 import java.awt.*;
 import java.awt.image.BufferedImage;
 
 public abstract class Animal extends Entity {
-    protected boolean isFemale;
-    protected float health;
-    protected float hunger;
+
     protected GamePanel gp;
 
+    // Status básicos que todo animal tem
+    protected int hunger = 0;
+    protected boolean isFemale = true;
+
     public Animal(GamePanel gp) {
-        super();
         this.gp = gp;
-        this.health = 100.0f;
-        this.hunger = 0.0f;
+        // Posição padrão se não for definida
+        this.worldX = GameConfig.TILE_SIZE * 20;
+        this.worldY = GameConfig.TILE_SIZE * 20;
+        this.direction = Direction.DOWN;
+
         loadSprites();
     }
 
-    // Métodos abstratos que cada animal deve implementar
+    // Método abstrato que Vaca e Galinha devem implementar
     protected abstract void loadSprites();
     public abstract void makeSound();
     public abstract void feed();
 
     public void update() {
-        // Atualiza o estado do animal
+        // Lógica simples de movimento aleatório (opcional)
+        // Aqui você pode adicionar IA para o animal andar sozinho depois
+
+        // Atualiza a animação
         spriteCounter++;
-        if (spriteCounter > 10) {
+        if (spriteCounter > 12) {
             spriteNumber = (spriteNumber == 1) ? 2 : 1;
             spriteCounter = 0;
         }
     }
 
-    public void render(Graphics2D g2D) {
-        // Calcula a posição na tela relativa ao jogador
-        int screenX = worldX - gp.player.getX() + gp.player.screenX;
-        int screenY = worldY - gp.player.getY() + gp.player.screenY;
+    public void draw(Graphics2D g2) {
+        BufferedImage image = null;
 
-        // Seleciona o sprite correto baseado na direção e número do sprite
-        BufferedImage image = switch (direction) {
-            case UP -> (spriteNumber == 1) ? up1 : up2;
-            case DOWN -> (spriteNumber == 1) ? down1 : down2;
-            case LEFT -> (spriteNumber == 1) ? left1 : left2;
-            case RIGHT -> (spriteNumber == 1) ? right1 : right2;
-        };
+        switch (direction) {
+            case UP -> image = (spriteNumber == 1) ? up1 : up2;
+            case DOWN -> image = (spriteNumber == 1) ? down1 : down2;
+            case LEFT -> image = (spriteNumber == 1) ? left1 : left2;
+            case RIGHT -> image = (spriteNumber == 1) ? right1 : right2;
+        }
 
-        // Desenha o animal na tela
-        if (image != null) {
-            g2D.drawImage(image, screenX, screenY, size, size, null);
+        // --- CORREÇÃO DO ERRO AQUI ---
+        // Usamos gp.player.worldX em vez de gp.player.getX()
+        // Usamos gp.player.worldY em vez de gp.player.getY()
+
+        int screenX = worldX - gp.player.worldX + gp.player.screenX;
+        int screenY = worldY - gp.player.worldY + gp.player.screenY;
+
+        // Otimização de Renderização (Culling)
+        // Só desenha o animal se ele estiver visível na câmera
+        if (worldX + GameConfig.TILE_SIZE > gp.player.worldX - gp.player.screenX &&
+                worldX - GameConfig.TILE_SIZE < gp.player.worldX + gp.player.screenX &&
+                worldY + GameConfig.TILE_SIZE > gp.player.worldY - gp.player.screenY &&
+                worldY - GameConfig.TILE_SIZE < gp.player.worldY + gp.player.screenY) {
+
+            if (image != null) {
+                g2.drawImage(image, screenX, screenY, size, size, null);
+            }
         }
     }
-
-    // Getters e setters úteis
-    public float getHealth() { return health; }
-    public float getHunger() { return hunger; }
-    public boolean isFemale() { return isFemale; }
-    public void setFemale(boolean female) { isFemale = female; }
 }

@@ -1,48 +1,49 @@
 package com.goldenvalley.handlers;
 
+import com.goldenvalley.core.panel.GamePanel;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 
 public class KeyHandler implements KeyListener {
 
     public boolean upPressed, downPressed, leftPressed, rightPressed;
+    public boolean enterPressed; // NOVA TECLA
+    private GamePanel gp;
+
+    public KeyHandler(GamePanel gp) {
+        this.gp = gp;
+    }
 
     @Override
     public void keyTyped(KeyEvent e) {}
 
     @Override
     public void keyPressed(KeyEvent e) {
-        int keyCode = e.getKeyCode();
+        int code = e.getKeyCode();
 
-        if (keyCode == KeyEvent.VK_W) {
-            upPressed = true;
-        }
-        if (keyCode == KeyEvent.VK_A) {
-            leftPressed = true;
-        }
-        if (keyCode == KeyEvent.VK_D) {
-            rightPressed = true;
-        }
-        if (keyCode == KeyEvent.VK_S) {
-            downPressed = true;
+        if (code == KeyEvent.VK_W) upPressed = true;
+        if (code == KeyEvent.VK_S) downPressed = true;
+        if (code == KeyEvent.VK_A) leftPressed = true;
+        if (code == KeyEvent.VK_D) rightPressed = true;
+
+        // Tecla de Ação
+        if (code == KeyEvent.VK_ENTER) enterPressed = true;
+
+        if (code == KeyEvent.VK_T) {
+            gp.debugMode = !gp.debugMode;
         }
     }
 
     @Override
     public void keyReleased(KeyEvent e) {
-        int keyCode = e.getKeyCode();
+        int code = e.getKeyCode();
 
-        if (keyCode == KeyEvent.VK_W) {
-            upPressed = false;
-        }
-        if (keyCode == KeyEvent.VK_A) {
-            leftPressed = false;
-        }
-        if (keyCode == KeyEvent.VK_D) {
-            rightPressed = false;
-        }
-        if (keyCode == KeyEvent.VK_S) {
-            downPressed = false;
-        }
+        if (code == KeyEvent.VK_W) upPressed = false;
+        if (code == KeyEvent.VK_S) downPressed = false;
+        if (code == KeyEvent.VK_A) leftPressed = false;
+        if (code == KeyEvent.VK_D) rightPressed = false;
+
+        // Soltou o Enter
+        if (code == KeyEvent.VK_ENTER) enterPressed = false;
     }
 }

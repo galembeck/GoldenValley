@@ -3,124 +3,182 @@ package com.goldenvalley.entities;
 import com.goldenvalley.core.config.GameConfig;
 import com.goldenvalley.core.panel.GamePanel;
 import com.goldenvalley.handlers.KeyHandler;
+import com.goldenvalley.objects.Crop;
+import com.goldenvalley.objects.GameObject;
+import com.goldenvalley.objects.Interactable;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
-import java.util.Objects;
 
 public class Player extends Entity {
+
+    private final GamePanel gp;
     private final KeyHandler keyHandler;
 
-    public final int screenX, screenY;
+    public final int screenX;
+    public final int screenY;
+    public boolean attacking;
 
     public Player(GamePanel gp, KeyHandler keyHandler) {
+        this.gp = gp;
         this.keyHandler = keyHandler;
 
-        screenX = (GameConfig.SCREEN_WIDTH - GameConfig.TILE_SIZE) / 2;
-        screenY = (GameConfig.SCREEN_HEIGHT - GameConfig.TILE_SIZE) / 2;
+        this.screenX = (GameConfig.SCREEN_WIDTH - GameConfig.TILE_SIZE) / 2;
+        this.screenY = (GameConfig.SCREEN_HEIGHT - GameConfig.TILE_SIZE) / 2;
 
         setDefaultValues();
         loadPlayerImage();
-
-        direction = Direction.DOWN;
     }
 
     public void setDefaultValues() {
-        this.worldX = GameConfig.TILE_SIZE * 23;
-        this.worldY = GameConfig.TILE_SIZE * 21;
+        this.worldX = GameConfig.TILE_SIZE * 11;
+        this.worldY = GameConfig.TILE_SIZE * 11;
         this.speed = GameConfig.DEFAULT_PLAYER_SPEED;
         this.size = GameConfig.TILE_SIZE;
+        this.direction = Direction.DOWN;
+
+        solidArea = new Rectangle(8, 16, 32, 32);
+        solidAreaDefaultX = solidArea.x;
+        solidAreaDefaultY = solidArea.y;
     }
 
     private void loadPlayerImage() {
         String basePath = "/assets/player/boy_";
-        String[] directions = {"up", "down", "left", "right"};
-
-        for (String dir : directions) {
-            loadDirectionSprites(dir, basePath + dir + "_");
-        }
+        up1 = setup(basePath + "up_1.png");
+        up2 = setup(basePath + "up_2.png");
+        down1 = setup(basePath + "down_1.png");
+        down2 = setup(basePath + "down_2.png");
+        left1 = setup(basePath + "left_1.png");
+        left2 = setup(basePath + "left_2.png");
+        right1 = setup(basePath + "right_1.png");
+        right2 = setup(basePath + "right_2.png");
     }
 
-    private void loadDirectionSprites(String directionStr, String basePath) {
+    public BufferedImage setup(String imagePath) {
+        BufferedImage image = null;
         try {
-            BufferedImage sprite1 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(basePath + "1.png")));
-            BufferedImage sprite2 = ImageIO.read(Objects.requireNonNull(getClass().getResourceAsStream(basePath + "2.png")));
-
-            switch (directionStr) {
-                case "up" -> { up1 = sprite1; up2 = sprite2; }
-                case "down" -> { down1 = sprite1; down2 = sprite2; }
-                case "left" -> { left1 = sprite1; left2 = sprite2; }
-                case "right" -> { right1 = sprite1; right2 = sprite2; }
-            }
+            var stream = getClass().getResourceAsStream(imagePath);
+            if (stream != null) image = ImageIO.read(stream);
         } catch (IOException e) {
             e.printStackTrace();
         }
-    }
-
-    public void moveUp() {
-        direction = Direction.UP;
-        worldY -= speed;
-    }
-
-    public void moveDown() {
-        direction = Direction.DOWN;
-        worldY += speed;
-    }
-
-    public void moveLeft() {
-        direction = Direction.LEFT;
-        worldX -= speed;
-    }
-
-    public void moveRight() {
-        direction = Direction.RIGHT;
-        worldX += speed;
+        return image;
     }
 
     public void update() {
-        boolean isMoving = false;
+        if (keyHandler.upPressed || keyHandler.downPressed ||
+                keyHandler.leftPressed || keyHandler.rightPressed || keyHandler.enterPressed) {
 
-        if (keyHandler.upPressed) {
-            moveUp();
-            isMoving = true;
-        }
-        if (keyHandler.downPressed) {
-            moveDown();
-            isMoving = true;
-        }
-        if (keyHandler.leftPressed) {
-            moveLeft();
-            isMoving = true;
-        }
-        if (keyHandler.rightPressed) {
-            moveRight();
-            isMoving = true;
-        }
+            // Direção
+            if (keyHandler.upPressed) direction = Direction.UP;
+            else if (keyHandler.downPressed) direction = Direction.DOWN;
+            else if (keyHandler.leftPressed) direction = Direction.LEFT;
+            else if (keyHandler.rightPressed) direction = Direction.RIGHT;
 
-//        worldX = Math.max(0, Math.min(worldX, GameConfig.SCREEN_WIDTH - size));
-//        worldY = Math.max(0, Math.min(worldY, GameConfig.SCREEN_HEIGHT - size));
+            // Colisão
+            collisionOn = false;
+            gp.cChecker.checkMap(this);
+            int objIndex = gp.cChecker.checkObject(this, true);
 
-        if (isMoving) {
+            // Interação (Enter)
+            if (keyHandler.enterPressed) {
+                interact(objIndex);
+                keyHandler.enterPressed = false;
+            }
+            // Movimento
+            else if (!collisionOn) {
+                switch (direction) {
+                    case UP -> worldY -= speed;
+                    case DOWN -> worldY += speed;
+                    case LEFT -> worldX -= speed;
+                    case RIGHT -> worldX += speed;
+                }
+            }
+
+            // Animação de andar
             spriteCounter++;
-            if (spriteCounter > 10) {
+            if (spriteCounter > 12) {
                 spriteNumber = (spriteNumber == 1) ? 2 : 1;
                 spriteCounter = 0;
+            }
+        }
+
+        // Limites da tela
+        if (gp.mapManager != null) {
+            int mapW = gp.mapManager.getMapWidth();
+            int mapH = gp.mapManager.getMapHeight();
+
+            if (worldX < 0) worldX = 0;
+            if (worldY < 0) worldY = 0;
+            if (worldX > mapW - size) worldX = mapW - size;
+            if (worldY > mapH - size) worldY = mapH - size;
+        }
+    }
+
+    public void interact(int index) {
+        // 1. Interagir com Objetos (Pedras, Baús)
+        if (index != 999) {
+            GameObject obj = gp.objects[index];
+            if (obj instanceof Interactable) {
+                ((Interactable) obj).interact(gp, index);
+            }
+        }
+        // 2. Ação no Chão (Pescar/Plantar)
+        else {
+            int nextX = worldX;
+            int nextY = worldY;
+
+            switch(direction) {
+                case UP -> nextY -= GameConfig.TILE_SIZE;
+                case DOWN -> nextY += GameConfig.TILE_SIZE;
+                case LEFT -> nextX -= GameConfig.TILE_SIZE;
+                case RIGHT -> nextX += GameConfig.TILE_SIZE;
+            }
+
+            // Verifica se o alvo é sólido (água/parede)
+            // Certifique-se de ter adicionado checkPosition no CollisionChecker!
+            boolean isSolid = gp.cChecker.checkPosition(nextX, nextY);
+
+            if (isSolid) {
+                // Se for sólido (água), pesca
+                System.out.println("Iniciando pescaria...");
+                gp.actionAnim.play("FISHING"); // Toca a animação
+            } else {
+                // Se for vazio, planta
+                plantCrop(nextX, nextY);
+                gp.actionAnim.play("PLANTING"); // Toca a animação
+            }
+        }
+    }
+
+    private void plantCrop(int x, int y) {
+        for(int i = 0; i < gp.objects.length; i++) {
+            if(gp.objects[i] == null) {
+                int gridX = (x / GameConfig.TILE_SIZE) * GameConfig.TILE_SIZE;
+                int gridY = (y / GameConfig.TILE_SIZE) * GameConfig.TILE_SIZE;
+
+                gp.objects[i] = new Crop(gridX, gridY);
+                break;
             }
         }
     }
 
     public void render(Graphics2D g2D) {
-        BufferedImage image = switch (direction) {
-            case UP -> (spriteNumber == 1) ? up1 : up2;
-            case DOWN -> (spriteNumber == 1) ? down1 : down2;
-            case LEFT -> (spriteNumber == 1) ? left1 : left2;
-            case RIGHT -> (spriteNumber == 1) ? right1 : right2;
-        };
+        BufferedImage image = null;
+        switch (direction) {
+            case UP -> image = (spriteNumber == 1) ? up1 : up2;
+            case DOWN -> image = (spriteNumber == 1) ? down1 : down2;
+            case LEFT -> image = (spriteNumber == 1) ? left1 : left2;
+            case RIGHT -> image = (spriteNumber == 1) ? right1 : right2;
+        }
 
         if (image != null) {
             g2D.drawImage(image, screenX, screenY, size, size, null);
+        } else {
+            g2D.setColor(Color.RED);
+            g2D.fillRect(screenX, screenY, size, size);
         }
     }
 }
